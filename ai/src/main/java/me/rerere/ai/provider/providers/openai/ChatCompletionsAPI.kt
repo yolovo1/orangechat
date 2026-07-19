@@ -237,8 +237,9 @@ class ChatCompletionsAPI(
             .addHeader("Authorization", "Bearer ${keyRoulette.next(providerSetting.apiKey, providerSetting.id.toString())}")
             .addHeader("Content-Type", "application/json")
             .configureReferHeaders(providerSetting.baseUrl)
-            .build(
-        Log.i(TAG, "streamText: ​request size = ${request​Body.size} entries")
+            .build()
+
+        Log.i(TAG, "streamText: request size = ${requestBody.size} entries")
 
         // just for debugging response body
         // println(client.newCall(request).await().body?.string())
