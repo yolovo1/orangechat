@@ -34,16 +34,11 @@ jobs:
       - name: Build web-ui
         run: |
           cd web-ui
-          pnpm install --frozen-lockfile
-          pnpm run build
-          cd ..
-      - name: Build web-ui
-        run: |
-          cd web-ui
           rm -f pnpm-workspace.yaml
           pnpm install --no-frozen-lockfile
           pnpm run build
           cd ..
+
       - name: Gradle cache
         uses: actions/cache@v4
         with:
@@ -66,7 +61,7 @@ jobs:
 
       - name: Write signing config
         run: |
-          echo "storeFile=app/app.key" > local.properties
+          echo "storeFile=app.key" > local.properties
           echo "storePassword=yanqi0604" >> local.properties
           echo "keyAlias=orangechat" >> local.properties
           echo "keyPassword=yanqi0604" >> local.properties
@@ -98,3 +93,4 @@ jobs:
             --title "Release ${{ steps.version.outputs.version }}" \
             --generate-notes \
             app/build/outputs/apk/release/*.apk
+
