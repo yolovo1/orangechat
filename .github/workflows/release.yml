@@ -36,7 +36,13 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
           cd ..
-
+      - name: Build web-ui
+        run: |
+          cd web-ui
+          rm -f pnpm-workspace.yaml
+          pnpm install --no-frozen-lockfile
+          pnpm run build
+          cd ..
       - name: Gradle cache
         uses: actions/cache@v4
         with:
