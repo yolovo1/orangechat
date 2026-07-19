@@ -52,15 +52,7 @@ jobs:
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-      - name: Restore keystore from cache
-        id: keystore-cache
-        uses: actions/cache@v4
-        with:
-          path: app/app.key
-          key: release-keystore-v1
-
-      - name: Generate keystore if not cached
-        if: steps.keystore-cache.outputs.cache-hit != 'true'
+      - name: Generate keystore
         run: |
           keytool -genkeypair -v \
             -keystore app/app.key \
