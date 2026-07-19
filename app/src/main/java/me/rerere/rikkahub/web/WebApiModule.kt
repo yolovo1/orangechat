@@ -42,6 +42,7 @@ import me.rerere.rikkahub.web.routes.settingsRoutes
 import java.security.MessageDigest
 import java.util.Date
 import java.util.UUID
+import me.rerere.rikkahub.web.routes.webhookRoutes
 
 private const val WEB_JWT_ISSUER = "rikkahub-web"
 private const val WEB_JWT_AUDIENCE = "rikkahub-web-client"
@@ -142,6 +143,7 @@ fun Application.configureWebApi(
     routing {
         route("/api") {
             post("/auth/token") {
+            webhookRoutes(chatService, conversationRepo, settingsStore)
                 val settings = settingsStore.settingsFlow.value
                 if (!settings.webServerJwtEnabled) {
                     throw BadRequestException("JWT auth is disabled")
