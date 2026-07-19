@@ -244,7 +244,6 @@ class GoogleProvider(private val client: OkHttpClient, context: Context? = null)
                 .build()
         )
 
-        Log.i(TAG, "streamText: ​request size = ${request​Body.size} entries")
 
         val listener = object : EventSourceListener() {
             override fun onEvent(

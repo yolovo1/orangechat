@@ -96,7 +96,6 @@ class ChatCompletionsAPI(
             .configureReferHeaders(providerSetting.baseUrl)
             .build()
 
-        Log.i(TAG, "generateText​: request size = ${reque​stBody.size} entries")
 
         val response = client.newCall(request).await()
         if (!response.isSuccessful) {
@@ -239,7 +238,6 @@ class ChatCompletionsAPI(
             .configureReferHeaders(providerSetting.baseUrl)
             .build()
 
-        Log.i(TAG, "streamText: request size = ${requestBody.size} entries")
 
         // just for debugging response body
         // println(client.newCall(request).await().body?.string())
