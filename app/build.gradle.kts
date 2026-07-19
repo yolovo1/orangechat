@@ -88,10 +88,10 @@ android {
     buildTypes {
         release {
             // Release 签名配置在 tasks 执行阶段强制校验，避免 Gradle 配置阶段就阻断 debug 构建
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
+           signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
+             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
