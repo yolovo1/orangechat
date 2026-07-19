@@ -142,8 +142,8 @@ fun Application.configureWebApi(
 
     routing {
         route("/api") {
-            post("/auth/token") {
             webhookRoutes(chatService, conversationRepo, settingsStore)
+            post("/auth/token") {
                 val settings = settingsStore.settingsFlow.value
                 if (!settings.webServerJwtEnabled) {
                     throw BadRequestException("JWT auth is disabled")

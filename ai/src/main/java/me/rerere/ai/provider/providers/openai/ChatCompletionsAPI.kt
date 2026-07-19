@@ -96,7 +96,7 @@ class ChatCompletionsAPI(
             .configureReferHeaders(providerSetting.baseUrl)
             .build()
 
-        Log.i(TAG, "generateText: ${json.encodeToString(requestBody)}")
+        Log.i(TAG, "generateText​: request size = ${reque​stBody.size} entries")
 
         val response = client.newCall(request).await()
         if (!response.isSuccessful) {
@@ -237,9 +237,8 @@ class ChatCompletionsAPI(
             .addHeader("Authorization", "Bearer ${keyRoulette.next(providerSetting.apiKey, providerSetting.id.toString())}")
             .addHeader("Content-Type", "application/json")
             .configureReferHeaders(providerSetting.baseUrl)
-            .build()
-
-        Log.i(TAG, "streamText: ${json.encodeToString(requestBody)}")
+            .build(
+        Log.i(TAG, "streamText: ​request size = ${request​Body.size} entries")
 
         // just for debugging response body
         // println(client.newCall(request).await().body?.string())
