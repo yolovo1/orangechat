@@ -1,0 +1,11 @@
+serverAddr = "62.234.180.217"
+serverPort = 7000
+auth.method = "token"
+auth.token = "qiqi2026"
+
+[[proxies]]
+name = "orangechat-webhook"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 8080
+remotePort = 8081

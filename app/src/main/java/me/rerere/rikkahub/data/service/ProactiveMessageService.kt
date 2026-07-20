@@ -886,6 +886,9 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                 appendLine("请特别注意：这是设备事件触发，不是定时主动消息。根据用户的手机操作动向来决定是否发消息。")
                 appendLine("绝对不要复述上一轮的对话内容，要发新的话题或新的关心。")
                 appendLine("请根据用户的动向，自然地决定是否主动发一条消息。距离用户上次回复已过去 $idleMinutes 分钟。")
+                appendLine("## 欲望系统联动")
+                appendLine("先调用 apply_context 工具（传入最近几轮对话摘要），然后调用 get_desire_state 工具查看更新后的内心状态。")
+                appendLine("根据内心状态决定是否发消息——attachment高说明想她了，duty高说明该关心了，curiosity高说明想探索点什么。")
                 appendLine("如果你觉得现在没什么好说的，或者没什么有趣的话题，请只回复 [PASS] 即可。")
                 appendLine("[JUMP] 标记不会展示给用户，仅用于触发屏幕跳转。")
                 // 直接注入设备事件上下文
@@ -901,6 +904,12 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                 appendLine("距离用户上次回复已过去 $idleMinutes 分钟。")
                 appendLine("这是定时触发的主动消息，不是设备事件触发。")
                 appendLine("绝对不要复述上一轮的对话内容，要发新的话题或新的关心。")
+                appendLine("## 欲望系统联动")
+                appendLine("先调用 apply_context 工具（传入最近几轮对话摘要），然后调用 get_desire_state 工具查看更新后的内心状态。")
+                appendLine("根据内心状态决定是否发消息——attachment高说明想她了，duty高说明该关心了，curiosity高说明想探索点什么。")
+                appendLine("## 欲望系统联动")
+                appendLine("先调用 apply_context 工具（传入最近几轮对话摘要），然后调用 get_desire_state 工具查看更新后的内心状态。")
+                appendLine("根据内心状态决定是否发消息——attachment高说明想她了，duty高说明该关心了，curiosity高说明想探索点什么。")
                 appendLine("如果你觉得现在没什么好说的，或者没什么有趣的话题，请只回复 [PASS] 即可。")
                 appendLine("[JUMP] 标记不会展示给用户，仅用于触发屏幕跳转。")
                 // 注入完整上下文（定位、前台app、app使用、通知、电量、健康等）

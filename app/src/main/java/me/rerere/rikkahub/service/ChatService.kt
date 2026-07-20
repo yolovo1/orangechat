@@ -514,7 +514,10 @@ class ChatService(
     // ---- Webhook触发生成（不创建user消息）----
     fun triggerGenerationWithoutUserMessage(conversationId: Uuid, systemPromptExtra: String? = null) {
         val session = getOrCreateSession(conversationId)
-        session.getJob()?.cancel()
+        if (session.getJob()?.isActive == true) {
+            Log.i(TAG, "triggerGenerationWithoutUserMessage skipped: generation in progress")
+            return
+        }
         val job = appScope.launch {
             try {
                 if (!systemPromptExtra.isNullOrBlank()) {
@@ -527,10 +530,24 @@ class ChatService(
                             ).toMessageNode()
                         )
                         updateConversation(conversationId, injected)
-                        saveConversation(conversationId, injected)
                     }
                 }
                 handleMessageComplete(conversationId)
+                if (!systemPromptExtra.isNullOrBlank()) {
+                    session.saveMutex.withLock {
+                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
+                        val cleaned = conv.copy(
+                            messageNodes = conv.messageNodes.filterNot { node ->
+                                node.message.role == MessageRole.SYSTEM &&
+                                node.message.parts.any { p ->
+                                    (p as? UIMessagePart.Text)?.text?.startsWith("[注入上下文]") == true
+                                }
+                            }
+                        )
+                        updateConversation(conversationId, cleaned)
+                        saveConversation(conversationId, cleaned)
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "triggerGenerationWithoutUserMessage failed", e)
             }
