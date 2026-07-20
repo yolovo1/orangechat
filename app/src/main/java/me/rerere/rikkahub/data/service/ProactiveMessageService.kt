@@ -585,17 +585,8 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                     ))
                 )
 
-                // 应用输入转换器
-                val processedUserMessage = listOf(userMessage).transforms(
-                    transformers = inputTransformers + templateTransformer,
-                    context = this@ProactiveMessageTriggerService,
-                    model = model,
-                    assistant = assistant,
-                    settings = settings
-                ).first()
-
-                // 组合完整消息列表：System + History + User Context
-                // 合并相邻同角色消息（包括 history 末尾与合成 User 消息之间可能出现的 USER-USER 相邻），避免 400
+                // 先组合完整消息列表（含SYSTEM），再统一应用输入转换器
+                // 这样 PromptInjectionTransformer 能正确找到 SYSTEM 消息并注入 mode_injection 内容
                 val messages = mergeAdjacentSameRoleMessages(
                     buildList {
                         add(UIMessage(
@@ -603,8 +594,14 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                             parts = listOf(UIMessagePart.Text(systemPrompt))
                         ))
                         addAll(historyMessages)
-                        add(processedUserMessage)
-                    }
+                        add(userMessage)
+                    }.transforms(
+                        transformers = inputTransformers + templateTransformer,
+                        context = this@ProactiveMessageTriggerService,
+                        model = model,
+                        assistant = assistant,
+                        settings = settings
+                    )
                 )
 
                 // 直接调用 AI API 生成消息
