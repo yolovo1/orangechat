@@ -510,6 +510,34 @@ class ChatService(
         session.setJob(job)
     }
 
+
+    // ---- Webhook触发生成（不创建user消息）----
+    fun triggerGenerationWithoutUserMessage(conversationId: Uuid, systemPromptExtra: String? = null) {
+        val session = getOrCreateSession(conversationId)
+        session.getJob()?.cancel()
+        val job = appScope.launch {
+            try {
+                if (!systemPromptExtra.isNullOrBlank()) {
+                    session.saveMutex.withLock {
+                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
+                        val injected = conv.copy(
+                            messageNodes = conv.messageNodes + UIMessage(
+                                role = MessageRole.SYSTEM,
+                                parts = listOf(UIMessagePart.Text("[注入上下文] $systemPromptExtra"))
+                            ).toMessageNode()
+                        )
+                        updateConversation(conversationId, injected)
+                        saveConversation(conversationId, injected)
+                    }
+                }
+                handleMessageComplete(conversationId)
+            } catch (e: Exception) {
+                Log.e(TAG, "triggerGenerationWithoutUserMessage failed", e)
+            }
+        }
+        session.setJob(job)
+    }
+
     // ---- 添加主动消息 ----
 
     fun addProactiveMessage(conversationId: Uuid, aiMessage: UIMessage) {

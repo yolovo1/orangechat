@@ -1073,13 +1073,25 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
      * 只有当所有待处理工具都不可恢复时，才整条移除。
      */
     private fun filterInvalidToolMessages(messages: List<UIMessage>): List<UIMessage> {
-        return messages.filterNot { message ->
-            val tools = message.getTools()
-            val hasPendingTools = tools.any { !it.isExecuted }
-            if (!hasPendingTools) return@filterNot false
-            val hasResumableTool = tools.any { !it.isExecuted && it.approvalState.canResumeToolExecution() }
-            !hasResumableTool
-        }
+        return messages
+            .filterNot { message ->
+                val tools = message.getTools()
+                val hasPendingTools = tools.any { !it.isExecuted }
+                if (!hasPendingTools) return@filterNot false
+                val hasResumableTool = tools.any { !it.isExecuted && it.approvalState.canResumeToolExecution() }
+                !hasResumableTool
+            }
+            .map { message ->
+                val tools = message.getTools()
+                if (tools.isNotEmpty()) {
+                    message.copy(
+                        parts = message.parts.filterNot {
+                            it is UIMessagePart.Tool && it.isExecuted
+                        }
+                    )
+                } else message
+            }
+            .filterNot { it.parts.isEmpty() }
     }
 
     /**

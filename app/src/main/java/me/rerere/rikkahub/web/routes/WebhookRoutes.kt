@@ -46,15 +46,10 @@ fun Route.webhookRoutes(
 
             when (request.type.lowercase()) {
                 "proactive" -> {
-                    val promptText = if (request.source == "wake_up") {
-                        "[主动消息] ${request.prompt}"
-                    } else {
-                        request.prompt
-                    }
-                    chatService.sendMessage(
+                    // 不创建user消息，把prompt作为system上下文注入后直接触发生成
+                    chatService.triggerGenerationWithoutUserMessage(
                         conversationId = convId,
-                        content = listOf(UIMessagePart.Text(promptText)),
-                        answer = true
+                        systemPromptExtra = request.prompt
                     )
                     call.respond(
                         HttpStatusCode.Accepted,
@@ -63,10 +58,10 @@ fun Route.webhookRoutes(
                 }
 
                 "inject" -> {
-                    chatService.sendMessage(
+                    // 注入system上下文，不创建user消息，不触发生成
+                    chatService.triggerGenerationWithoutUserMessage(
                         conversationId = convId,
-                        content = listOf(UIMessagePart.Text("[上下文注入] ${request.prompt}")),
-                        answer = false
+                        systemPromptExtra = request.prompt
                     )
                     call.respond(
                         HttpStatusCode.Accepted,
