@@ -538,8 +538,8 @@ class ChatService(
                         val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
                         val cleaned = conv.copy(
                             messageNodes = conv.messageNodes.filterNot { node ->
-                                node.message.role == MessageRole.SYSTEM &&
-                                node.message.parts.any { p ->
+                                node.role == MessageRole.SYSTEM &&
+                                node.currentMessage.parts.any { p ->
                                     (p as? UIMessagePart.Text)?.text?.startsWith("[注入上下文]") == true
                                 }
                             }
