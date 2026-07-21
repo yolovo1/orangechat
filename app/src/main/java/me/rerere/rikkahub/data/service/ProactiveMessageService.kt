@@ -340,7 +340,6 @@ class ProactiveMessageService : KoinComponent {
         sb.appendLine("- 不要说\"根据xxx\"、\"我注意到xxx数据\"之类暴露信息来源的话")
         sb.appendLine("- 直接以朋友聊天的语气开口，就像你突然想到了什么想跟对方说")
         sb.appendLine("- 不要使用任何XML标签、思考标记或特殊格式，只输出纯文本的消息内容")
-        sb.appendLine("- 不要调用任何工具或函数，只输出纯文本回复")
         sb.appendLine("- 不要输出思考过程、推理过程或内部独白，只输出你想对用户说的话")
         return sb.toString()
     }
