@@ -449,9 +449,7 @@ class ChatService(
                             "conversation_id" to JsonPrimitive(conversationId.toString()),
                             "message" to JsonPrimitive(processedContent.mapNotNull { part ->
                                 if (part is UIMessagePart.Text) part.text else null
-                            .joinToString("\n\n")
-
-")),
+                                                }.joinToString(System.lineSeparator())),
                             "role" to JsonPrimitive("user"),
                             "timestamp" to JsonPrimitive(System.currentTimeMillis())
                         )
@@ -476,9 +474,7 @@ class ChatService(
                     if (externalMemoryConfigs.isNotEmpty()) {
                         val messageText = processedContent.mapNotNull { part ->
                             if (part is UIMessagePart.Text) part.text else null
-                            .joinToString("\n\n")
-
-")
+                            .joinToString(System.lineSeparator())
                         externalMemoryConfigs.forEach { config ->
                             appScope.launch {
                                 runCatching {
@@ -525,16 +521,91 @@ class ChatService(
         val job = appScope.launch {
             try {
                 if (!systemPromptExtra.isNullOrBlank()) {
+                    session.saveMutex.withLock {
+                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
+                        val originalPrompt = conv.customSystemPrompt
+                        val sep = System.lineSeparator()
+                        val tempConv = conv.copy(
+                            customSystemPrompt = listOfNotNull(originalPrompt, systemPromptExtra)
+                                .filter { it.isNotBlank() }
+                                .joinToString(sep)
+                        )
+                        updateConversation(conversationId, tempConv)
+                    }
+                }
+                handleMessageComplete(conversationId)
+                if (!systemPromptExtra.isNullOrBlank()) {
+                    session.saveMutex.withLock {
+                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
+                        val cleaned = conv.copy(
+                            customSystemPrompt = conv.customSystemPrompt?.replace(systemPromptExtra, "")?.trim()?.ifBlank { null }
+                        )
+                        updateConversation(conversationId, cleaned)
+                        saveConversation(conversationId, cleaned)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "triggerGenerationWithoutUserMessage failed", e)
+            }
+        }
+        session.setJob(job)
+    }
+
+    fun triggerGenerationWithoutUserMessage(conversationId: Uuid, systemPromptExtra: String? = null) {
+        val session = getOrCreateSession(conversationId)
+        if (session.getJob()?.isActive == true) {
+            Log.i(TAG, "triggerGenerationWithoutUserMessage skipped: generation in progress")
+            return
+        }
+        val job = appScope.launch {
+            try {
+                if (!systemPromptExtra.isNullOrBlank()) {
+                    session.saveMutex.withLock {
+                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
+                        val originalPrompt = conv.customSystemPrompt
+                        val tempConv = conv.copy(
+                            customSystemPrompt = listOfNotNull(originalPrompt, systemPromptExtra)
+                                .filter { it.isNotBlank() }
+                                .joinToString(System.lineSeparator())
+                        )
+                        updateConversation(conversationId, tempConv)
+                    }
+                }
+                handleMessageComplete(conversationId)
+                if (!systemPromptExtra.isNullOrBlank()) {
+                    session.saveMutex.withLock {
+                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
+                        val cleaned = conv.copy(
+                            customSystemPrompt = conv.customSystemPrompt?.replace(systemPromptExtra, "")?.trim()?.ifBlank { null }
+                        )
+                        updateConversation(conversationId, cleaned)
+                        saveConversation(conversationId, cleaned)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "triggerGenerationWithoutUserMessage failed", e)
+            }
+        }
+        session.setJob(job)
+    }
+
+    fun triggerGenerationWithoutUserMessage(conversationId: Uuid, systemPromptExtra: String? = null) {
+        val session = getOrCreateSession(conversationId)
+        if (session.getJob()?.isActive == true) {
+            Log.i(TAG, "triggerGenerationWithoutUserMessage skipped: generation in progress")
+            return
+        }
+        val job = appScope.launch {
+            try {
+                if (!systemPromptExtra.isNullOrBlank()) {
                 session.saveMutex.withLock {
                     val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
                     val originalPrompt = conv.customSystemPrompt
                     val tempConv = conv.copy(
                         customSystemPrompt = listOfNotNull(originalPrompt, systemPromptExtra)
                             .filter { it.isNotBlank() }
-                            .joinToString("\n\n")
-
-")
-                    )
+                            .joinToString(System.lineSeparator())
+                        )
                     updateConversation(conversationId, tempConv)
                 }
             }
