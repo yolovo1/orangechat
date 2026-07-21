@@ -521,33 +521,30 @@ class ChatService(
         val job = appScope.launch {
             try {
                 if (!systemPromptExtra.isNullOrBlank()) {
-                    session.saveMutex.withLock {
-                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
-                        val injected = conv.copy(
-                            messageNodes = conv.messageNodes + UIMessage(
-                                role = MessageRole.SYSTEM,
-                                parts = listOf(UIMessagePart.Text("[注入上下文] $systemPromptExtra"))
-                            ).toMessageNode()
-                        )
-                        updateConversation(conversationId, injected)
-                    }
+                session.saveMutex.withLock {
+                    val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
+                    val originalPrompt = conv.customSystemPrompt
+                    val tempConv = conv.copy(
+                        customSystemPrompt = listOfNotNull(originalPrompt, systemPromptExtra)
+                            .filter { it.isNotBlank() }
+                            .joinToString("
+
+")
+                    )
+                    updateConversation(conversationId, tempConv)
                 }
-                handleMessageComplete(conversationId)
-                if (!systemPromptExtra.isNullOrBlank()) {
-                    session.saveMutex.withLock {
-                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
-                        val cleaned = conv.copy(
-                            messageNodes = conv.messageNodes.filterNot { node ->
-                                node.role == MessageRole.SYSTEM &&
-                                node.currentMessage.parts.any { p ->
-                                    (p as? UIMessagePart.Text)?.text?.startsWith("[注入上下文]") == true
-                                }
-                            }
-                        )
-                        updateConversation(conversationId, cleaned)
-                        saveConversation(conversationId, cleaned)
-                    }
+            }
+            handleMessageComplete(conversationId)
+            if (!systemPromptExtra.isNullOrBlank()) {
+                session.saveMutex.withLock {
+                    val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
+                    val cleaned = conv.copy(
+                        customSystemPrompt = conv.customSystemPrompt?.replace(systemPromptExtra, "")?.trim()?.ifBlank { null }
+                    )
+                    updateConversation(conversationId, cleaned)
+                    saveConversation(conversationId, cleaned)
                 }
+            }
             } catch (e: Exception) {
                 Log.e(TAG, "triggerGenerationWithoutUserMessage failed", e)
             }

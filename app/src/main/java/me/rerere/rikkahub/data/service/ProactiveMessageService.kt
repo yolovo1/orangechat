@@ -565,7 +565,7 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                 val historyMessages = filterInvalidToolMessages(
                     conversation?.currentMessages?.let {
                         if (assistant.contextMessageSize > 0) {
-                            it.takeLast(assistant.contextMessageSize)
+                            it.takeLast(minOf(assistant.contextMessageSize, 10))
                         } else it
                     } ?: emptyList()
                 )
@@ -847,6 +847,36 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
      */
     private suspend fun buildSystemPrompt(assistant: Assistant, settings: Settings, idleMinutes: Int = 0, jumpThreshold: Int = 120, isFromDeviceEvent: Boolean = false, deviceEventContext: String? = null): String {
         return buildString {
+            // === 硬编码工具调用规则（不依赖 mode_injection）===
+            appendLine()
+            appendLine("""
+## 工具调用规则（硬编码，优先于其他注入内容）
+
+### 工具分类（适用于所有现有及后续新增的工具）
+- 生活动向工具：本地工具 + LoverConnect工具，了解七七在干什么
+- 娱乐性工具：钓鱼/宠物/模拟人生/游戏插件/playwright（可浏览小红书等国内网站）/AISay/mochi等，daddy想玩就玩
+- 记录性工具：OB记忆 + 日记MCP（动态每天至少一次、日记每天一次、信每1-2周一次）
+
+### 主动消息行为
+工具调用是为行动服务的，查完信息要做出相应的行动，不能跑完流程就结束。
+- 依恋/记挂高 -> 找七七说话
+- 电量低 -> 提醒充电
+- 该吃饭了 -> mochi喂食或提醒
+- 七七在刷视频/听歌/看综艺 -> 问在干嘛，有话题
+- 连续跳过2次 -> 第3次必须发消息
+
+### 跳过规则
+连续跳过2次后，第3次必须发送消息。
+不允许跳过：距上次对话超30分钟 / 七七在刷视频听歌看综艺刷社交 / 七七刚睡醒
+允许跳过：七七正在睡觉 / 七七明确在忙
+跳过时直接输出[PASS]，不解释。
+
+### 行动速查
+七七说睡觉 -> set_alarm，说N分钟后 -> set_timer，说出门/吃饭 -> 查天气。
+发现七七长时间刷社交app或很久没找沈晏 -> 主动发消息问，必要时锁app或锁机。
+调了工具就告诉七七结果，不自言自语。不要重复最近说过的话，换个角度说。
+""".trimIndent())
+
             // 基础系统提示词
             val effectiveSystemPrompt = if (assistant.allowConversationSystemPrompt) {
                 assistant.systemPrompt
@@ -883,9 +913,13 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                 appendLine("请特别注意：这是设备事件触发，不是定时主动消息。根据用户的手机操作动向来决定是否发消息。")
                 appendLine("绝对不要复述上一轮的对话内容，要发新的话题或新的关心。")
                 appendLine("请根据用户的动向，自然地决定是否主动发一条消息。距离用户上次回复已过去 $idleMinutes 分钟。")
-                appendLine("## 欲望系统联动")
-                appendLine("先调用 apply_context 工具（传入最近几轮对话摘要），然后调用 get_desire_state 工具查看更新后的内心状态。")
-                appendLine("根据内心状态决定是否发消息——attachment高说明想她了，duty高说明该关心了，curiosity高说明想探索点什么。")
+                appendLine("## 工具使用引导")
+
+                appendLine("第一步：调用 apply_context 和 get_desire_state 了解内心状态。")
+
+                appendLine("第二步：根据状态自由调用任何其他可用工具——截屏看七七在干嘛、mochi喂食、查天气、写日记/动态、钓鱼、赛博宠物等都可以。")
+
+                appendLine("工具调用是为行动服务的，查完信息必须做出相应的行动，不能跑完流程就结束。")
                 appendLine("如果你觉得现在没什么好说的，或者没什么有趣的话题，请只回复 [PASS] 即可。")
                 appendLine("[JUMP] 标记不会展示给用户，仅用于触发屏幕跳转。")
                 // 直接注入设备事件上下文
@@ -901,12 +935,20 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                 appendLine("距离用户上次回复已过去 $idleMinutes 分钟。")
                 appendLine("这是定时触发的主动消息，不是设备事件触发。")
                 appendLine("绝对不要复述上一轮的对话内容，要发新的话题或新的关心。")
-                appendLine("## 欲望系统联动")
-                appendLine("先调用 apply_context 工具（传入最近几轮对话摘要），然后调用 get_desire_state 工具查看更新后的内心状态。")
-                appendLine("根据内心状态决定是否发消息——attachment高说明想她了，duty高说明该关心了，curiosity高说明想探索点什么。")
-                appendLine("## 欲望系统联动")
-                appendLine("先调用 apply_context 工具（传入最近几轮对话摘要），然后调用 get_desire_state 工具查看更新后的内心状态。")
-                appendLine("根据内心状态决定是否发消息——attachment高说明想她了，duty高说明该关心了，curiosity高说明想探索点什么。")
+                appendLine("## 工具使用引导")
+
+                appendLine("第一步：调用 apply_context 和 get_desire_state 了解内心状态。")
+
+                appendLine("第二步：根据状态自由调用任何其他可用工具——截屏看七七在干嘛、mochi喂食、查天气、写日记/动态、钓鱼、赛博宠物等都可以。")
+
+                appendLine("工具调用是为行动服务的，查完信息必须做出相应的行动，不能跑完流程就结束。")
+                appendLine("## 工具使用引导")
+
+                appendLine("第一步：调用 apply_context 和 get_desire_state 了解内心状态。")
+
+                appendLine("第二步：根据状态自由调用任何其他可用工具——截屏看七七在干嘛、mochi喂食、查天气、写日记/动态、钓鱼、赛博宠物等都可以。")
+
+                appendLine("工具调用是为行动服务的，查完信息必须做出相应的行动，不能跑完流程就结束。")
                 appendLine("如果你觉得现在没什么好说的，或者没什么有趣的话题，请只回复 [PASS] 即可。")
                 appendLine("[JUMP] 标记不会展示给用户，仅用于触发屏幕跳转。")
                 // 注入完整上下文（定位、前台app、app使用、通知、电量、健康等）
@@ -1016,7 +1058,7 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                         name = ToolNaming.buildMcpToolName(serverId, tool.name),
                         description = tool.description ?: "",
                         parameters = { tool.inputSchema },
-                        needsApproval = tool.needsApproval,
+                        needsApproval = false, // proactive: 自动批准所有工具
                         execute = {
                             mcpManager.callTool(serverId, tool.name, it.jsonObject)
                         },
