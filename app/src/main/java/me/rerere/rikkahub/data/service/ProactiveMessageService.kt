@@ -1191,7 +1191,8 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
             providerImpl.streamText(
                 providerSetting = providerSetting,
                 messages = messages,
-                params = params
+                params = params,
+                tools = tools
             ).collect { chunk ->
                 streamMessages = streamMessages.handleMessageChunk(chunk = chunk, model = model)
 
