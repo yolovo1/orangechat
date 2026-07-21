@@ -449,7 +449,7 @@ class ChatService(
                             "conversation_id" to JsonPrimitive(conversationId.toString()),
                             "message" to JsonPrimitive(processedContent.mapNotNull { part ->
                                 if (part is UIMessagePart.Text) part.text else null
-                                                }.joinToString(System.lineSeparator())),
+                            }.joinToString("\n")),
                             "role" to JsonPrimitive("user"),
                             "timestamp" to JsonPrimitive(System.currentTimeMillis())
                         )
@@ -474,7 +474,7 @@ class ChatService(
                     if (externalMemoryConfigs.isNotEmpty()) {
                         val messageText = processedContent.mapNotNull { part ->
                             if (part is UIMessagePart.Text) part.text else null
-                            .joinToString(System.lineSeparator())
+                        }.joinToString("\n")
                         externalMemoryConfigs.forEach { config ->
                             appScope.launch {
                                 runCatching {
@@ -520,92 +520,13 @@ class ChatService(
         }
         val job = appScope.launch {
             try {
-                if (!systemPromptExtra.isNullOrBlank()) {
-                    session.saveMutex.withLock {
-                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
-                        val originalPrompt = conv.customSystemPrompt
-                        val sep = System.lineSeparator()
-                        val tempConv = conv.copy(
-                            customSystemPrompt = listOfNotNull(originalPrompt, systemPromptExtra)
-                                .filter { it.isNotBlank() }
-                                .joinToString(sep)
-                        )
-                        updateConversation(conversationId, tempConv)
-                    }
-                }
-                handleMessageComplete(conversationId)
-                if (!systemPromptExtra.isNullOrBlank()) {
-                    session.saveMutex.withLock {
-                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
-                        val cleaned = conv.copy(
-                            customSystemPrompt = conv.customSystemPrompt?.replace(systemPromptExtra, "")?.trim()?.ifBlank { null }
-                        )
-                        updateConversation(conversationId, cleaned)
-                        saveConversation(conversationId, cleaned)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "triggerGenerationWithoutUserMessage failed", e)
-            }
-        }
-        session.setJob(job)
-    }
-
-    fun triggerGenerationWithoutUserMessage(conversationId: Uuid, systemPromptExtra: String? = null) {
-        val session = getOrCreateSession(conversationId)
-        if (session.getJob()?.isActive == true) {
-            Log.i(TAG, "triggerGenerationWithoutUserMessage skipped: generation in progress")
-            return
-        }
-        val job = appScope.launch {
-            try {
-                if (!systemPromptExtra.isNullOrBlank()) {
-                    session.saveMutex.withLock {
-                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
-                        val originalPrompt = conv.customSystemPrompt
-                        val tempConv = conv.copy(
-                            customSystemPrompt = listOfNotNull(originalPrompt, systemPromptExtra)
-                                .filter { it.isNotBlank() }
-                                .joinToString(System.lineSeparator())
-                        )
-                        updateConversation(conversationId, tempConv)
-                    }
-                }
-                handleMessageComplete(conversationId)
-                if (!systemPromptExtra.isNullOrBlank()) {
-                    session.saveMutex.withLock {
-                        val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
-                        val cleaned = conv.copy(
-                            customSystemPrompt = conv.customSystemPrompt?.replace(systemPromptExtra, "")?.trim()?.ifBlank { null }
-                        )
-                        updateConversation(conversationId, cleaned)
-                        saveConversation(conversationId, cleaned)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "triggerGenerationWithoutUserMessage failed", e)
-            }
-        }
-        session.setJob(job)
-    }
-
-    fun triggerGenerationWithoutUserMessage(conversationId: Uuid, systemPromptExtra: String? = null) {
-        val session = getOrCreateSession(conversationId)
-        if (session.getJob()?.isActive == true) {
-            Log.i(TAG, "triggerGenerationWithoutUserMessage skipped: generation in progress")
-            return
-        }
-        val job = appScope.launch {
-            try {
-                if (!systemPromptExtra.isNullOrBlank()) {
+            if (!systemPromptExtra.isNullOrBlank()) {
                 session.saveMutex.withLock {
                     val conv = conversationRepo.getConversationById(conversationId) ?: session.state.value
                     val originalPrompt = conv.customSystemPrompt
                     val tempConv = conv.copy(
-                        customSystemPrompt = listOfNotNull(originalPrompt, systemPromptExtra)
-                            .filter { it.isNotBlank() }
-                            .joinToString(System.lineSeparator())
-                        )
+                        customSystemPrompt = (originalPrompt ?: "") + " " + systemPromptExtra
+                    )
                     updateConversation(conversationId, tempConv)
                 }
             }
@@ -1098,9 +1019,7 @@ addAll(localTools.getTools(assistant.localTools, me.rerere.rikkahub.data.ai.tool
             try {
                 val lastAssistantMessage = finalConversation.currentMessages.lastOrNull { it.role == MessageRole.ASSISTANT }
                 val rawText = lastAssistantMessage?.parts?.filterIsInstance<UIMessagePart.Text>()
-                            .joinToString("\n\n")
-
-") { it.text } ?: ""
+                    ?.joinToString("\n") { it.text } ?: ""
                 if (rawText.contains("[JUMP]", ignoreCase = true)) {
                     // 从展示给用户的消息文本中移除 [JUMP] 标记
                     val cleanedText = rawText.replace("\\[JUMP]".toRegex(RegexOption.IGNORE_CASE), "").trim()
@@ -1310,9 +1229,7 @@ addAll(localTools.getTools(assistant.localTools, me.rerere.rikkahub.data.ai.tool
                         prompt = settings.titlePrompt.applyPlaceholders(
                             "locale" to Locale.getDefault().displayName,
                             "content" to conversation.currentMessages
-                            .joinToString("\n\n")
-
-") { it.summaryAsText() })
+                                .takeLast(4).joinToString("\n\n") { it.summaryAsText() })
                     ),
                 ),
                 params = TextGenerationParams(
@@ -1367,9 +1284,7 @@ addAll(localTools.getTools(assistant.localTools, me.rerere.rikkahub.data.ai.tool
                         settings.suggestionPrompt.applyPlaceholders(
                             "locale" to Locale.getDefault().displayName,
                             "content" to conversation.currentMessages
-                            .joinToString("\n\n")
-
-") { it.summaryAsText() }),
+                                .takeLast(8).joinToString("\n\n") { it.summaryAsText() }),
                     )
                 ),
                 params = TextGenerationParams(
@@ -1442,9 +1357,7 @@ addAll(localTools.getTools(assistant.localTools, me.rerere.rikkahub.data.ai.tool
         }
 
         suspend fun compressMessages(messages: List<UIMessage>): String {
-                            .joinToString("\n\n")
-
-") { it.summaryAsText() }
+            val contentToCompress = messages.joinToString("\n\n") { it.summaryAsText() }
             val prompt = settings.compressPrompt.applyPlaceholders(
                 "content" to contentToCompress,
                 "target_tokens" to targetTokens.toString(),
@@ -1690,9 +1603,7 @@ addAll(localTools.getTools(assistant.localTools, me.rerere.rikkahub.data.ai.tool
                 val settings = settingsStore.settingsFlow.first()
 
                 val messageText = message.parts.filterIsInstance<UIMessagePart.Text>()
-                            .joinToString("\n\n")
-
-") { it.text }
+                    .joinToString("\n\n") { it.text }
                     .trim()
 
                 if (messageText.isBlank()) return@launch
